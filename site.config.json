@@ -1,0 +1,24 @@
+{
+  "siteName": "CalcuYa",
+  "tagline": "Calculadoras y conversores gratis, rápidos y sin registro",
+  "siteUrl": "https://devgizcol.github.io/calcuya",
+  "contactEmail": "Agaviria2109@gmail.com",
+  "googleSiteVerification": "",
+  "adsense": {
+    "client": ""
+  },
+  "ads": {
+    "headHtml": "",
+    "slotHtml": ""
+  },
+  "analyticsHtml": "",
+  "affiliates": [
+    {
+      "enabled": false,
+      "tools": ["interes-compuesto", "meta-de-ahorro", "prestamo"],
+      "title": "Recomendado",
+      "text": "Describe aquí el producto o servicio afiliado (curso, app, libro...).",
+      "url": "https://tu-enlace-de-afiliado.example"
+    }
+  ]
+}
