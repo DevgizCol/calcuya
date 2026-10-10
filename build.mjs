@@ -106,6 +106,11 @@ const faqLd = faq => ({
 // `calc` se ejecuta en el navegador (se serializa a assets/tools.js): solo puede usar `fmt`.
 const CURRENCIES = ['USD', 'EUR', 'MXN', 'COP', 'ARS', 'CLP', 'PEN', 'BRL', 'UYU', 'BOB', 'PYG', 'DOP', 'GTQ', 'CRC', 'VES', 'GBP', 'CAD', 'JPY'].map(c => [c, c]);
 
+// Colombia: SMMLV y auxilio de transporte 2026 (Decretos 1469 y 1470 de 2025). Actualizar cada enero.
+const CO = { smmlv: 1750905, aux: 249095 };
+const AUX_INPUT = { id: 'aux', label: 'Auxilio de transporte', type: 'select', value: 'auto', options: [['auto', 'Automático (si gana hasta 2 salarios mínimos)'], ['si', 'Sí recibe'], ['no', 'No recibe']] };
+const CO_NOTE = `<p class="muted">Valores ${YEAR}: salario mínimo $ ${fmt(CO.smmlv)} y auxilio de transporte $ ${fmt(CO.aux)}. Cálculo orientativo: no reemplaza la liquidación oficial de tu empleador ni la asesoría de un contador o abogado laboral.</p>`;
+
 const tools = [
   {
     slug: 'interes-compuesto', icon: '📈', name: 'Calculadora de interés compuesto',
@@ -351,6 +356,147 @@ const tools = [
 <p class="muted">Tasas proporcionadas por <a href="https://www.exchangerate-api.com" rel="nofollow noopener" target="_blank">Exchange Rate API</a>.</p>`,
     faq: [['¿Puedo usar estas tasas para operaciones reales?', 'Son informativas. Antes de una operación consulta la tasa exacta con tu entidad financiera.']],
   },
+  {
+    slug: 'prima-de-servicios-colombia', group: 'laboral', icon: '🎁', name: `Calculadora de prima de servicios ${YEAR} (Colombia)`,
+    desc: `Calcula tu prima de servicios de junio o diciembre de ${YEAR} en Colombia según tu salario y los días trabajados en el semestre.`,
+    intro: 'Escribe tu salario mensual y los días trabajados en el semestre para saber cuánto debes recibir de prima.',
+    inputs: [
+      { id: 'salario', label: 'Salario mensual', value: CO.smmlv },
+      AUX_INPUT,
+      { id: 'dias', label: 'Días trabajados en el semestre', value: 180 },
+    ],
+    calc: ({ salario, aux, dias }) => {
+      const base = salario + coAux(salario, aux);
+      return [['Prima de servicios', cop((base * dias) / 360)], ['Base de liquidación', cop(base)], ['Días liquidados', fmt(dias)]];
+    },
+    article: `<h2>¿Cómo se calcula la prima de servicios?</h2>
+<p>La prima equivale a un mes de salario por cada año trabajado, pagado en dos partes. La fórmula por semestre es <strong>(salario base × días trabajados en el semestre) ÷ 360</strong>. Un semestre completo son 180 días, así que quien trabajó los seis meses recibe medio salario.</p>
+<p>La base incluye el auxilio de transporte cuando el trabajador tiene derecho a él, es decir, cuando gana hasta dos salarios mínimos. Si tu salario es variable (comisiones, horas extras), se usa el promedio del semestre.</p>
+<h2>¿Cuándo se paga?</h2>
+<p>La primera mitad se paga a más tardar el 30 de junio y la segunda dentro de los primeros 20 días de diciembre.</p>${CO_NOTE}`,
+    faq: [
+      ['¿Quién tiene derecho a la prima?', 'Todos los trabajadores con contrato laboral, incluidos los del servicio doméstico y los de tiempo parcial. No aplica a contratistas por prestación de servicios ni a quienes tienen salario integral.'],
+      ['¿Qué pasa si no trabajé el semestre completo?', 'Se paga proporcional a los días trabajados. Con 90 días recibirías la mitad de la prima de un semestre completo.'],
+    ],
+  },
+  {
+    slug: 'cesantias-colombia', group: 'laboral', icon: '🏠', name: `Calculadora de cesantías e intereses ${YEAR} (Colombia)`,
+    desc: `Calcula tus cesantías y los intereses sobre las cesantías de ${YEAR} en Colombia a partir de tu salario y días trabajados.`,
+    intro: 'Calcula cuánto te corresponde de cesantías y de intereses según tu salario y los días trabajados en el año.',
+    inputs: [
+      { id: 'salario', label: 'Salario mensual', value: CO.smmlv },
+      AUX_INPUT,
+      { id: 'dias', label: 'Días trabajados en el año', value: 360 },
+    ],
+    calc: ({ salario, aux, dias }) => {
+      const ces = ((salario + coAux(salario, aux)) * dias) / 360;
+      const int = (ces * dias * 0.12) / 360;
+      return [['Cesantías', cop(ces)], ['Intereses sobre cesantías', cop(int)], ['Total', cop(ces + int)]];
+    },
+    article: `<h2>Fórmulas</h2>
+<p><strong>Cesantías = (salario base × días trabajados) ÷ 360.</strong> Equivalen a un mes de salario por cada año trabajado. La base incluye el auxilio de transporte si tienes derecho a él.</p>
+<p><strong>Intereses = (cesantías × días trabajados × 0,12) ÷ 360.</strong> Son el 12% anual sobre el saldo de cesantías, proporcional al tiempo trabajado.</p>
+<h2>Fechas clave</h2>
+<p>El empleador debe pagarte los intereses directamente a más tardar el 31 de enero, y consignar las cesantías en tu fondo antes del 15 de febrero del año siguiente.</p>${CO_NOTE}`,
+    faq: [['¿Para qué puedo retirar las cesantías?', 'Mientras estés empleado, para compra, construcción o mejora de vivienda y para educación. Al terminar el contrato puedes retirarlas libremente.']],
+  },
+  {
+    slug: 'liquidacion-colombia', group: 'laboral', icon: '📄', name: `Calculadora de liquidación laboral ${YEAR} (Colombia)`,
+    desc: `Calcula tu liquidación de contrato en Colombia ${YEAR}: cesantías, intereses, prima de servicios y vacaciones pendientes.`,
+    intro: 'Estima las prestaciones que deben pagarte al terminar tu contrato: cesantías, intereses, prima y vacaciones.',
+    inputs: [
+      { id: 'salario', label: 'Salario mensual', value: CO.smmlv },
+      AUX_INPUT,
+      { id: 'diasAnio', label: 'Días trabajados en el año (cesantías)', value: 360 },
+      { id: 'diasSem', label: 'Días trabajados en el semestre (prima)', value: 180 },
+      { id: 'diasVac', label: 'Días trabajados sin disfrutar vacaciones', value: 360 },
+    ],
+    calc: ({ salario, aux, diasAnio, diasSem, diasVac }) => {
+      const base = salario + coAux(salario, aux);
+      const ces = (base * diasAnio) / 360, int = (ces * diasAnio * 0.12) / 360;
+      const prima = (base * diasSem) / 360, vac = (salario * diasVac) / 720;
+      return [['Total liquidación', cop(ces + int + prima + vac)], ['Cesantías', cop(ces)], ['Intereses sobre cesantías', cop(int)], ['Prima de servicios', cop(prima)], ['Vacaciones', cop(vac)]];
+    },
+    article: `<h2>¿Qué incluye la liquidación?</h2>
+<p>Al terminar un contrato laboral, el empleador debe pagar las prestaciones causadas y no pagadas:</p>
+<ul><li><strong>Cesantías:</strong> (salario base × días del año) ÷ 360.</li>
+<li><strong>Intereses sobre cesantías:</strong> (cesantías × días × 0,12) ÷ 360.</li>
+<li><strong>Prima de servicios:</strong> (salario base × días del semestre) ÷ 360.</li>
+<li><strong>Vacaciones:</strong> (salario × días pendientes) ÷ 720. Aquí no se incluye el auxilio de transporte.</li></ul>
+<p>Esta calculadora no incluye el salario de los últimos días trabajados, la indemnización por despido sin justa causa ni descuentos por préstamos; súmalos o réstalos según tu caso.</p>${CO_NOTE}`,
+    faq: [
+      ['¿Cuánto tiempo tiene el empleador para pagar la liquidación?', 'Debe pagarla al terminar el contrato. Si se retrasa sin justificación puede generarse una sanción moratoria a favor del trabajador.'],
+      ['¿La liquidación incluye indemnización?', 'Solo si el despido fue sin justa causa. Su valor depende del tipo de contrato y del tiempo trabajado, y no está incluida en este cálculo.'],
+    ],
+  },
+  {
+    slug: 'salario-neto-colombia', group: 'laboral', icon: '💵', name: `Calculadora de salario neto ${YEAR} (Colombia)`,
+    desc: `Calcula cuánto recibes realmente en Colombia en ${YEAR} después de los descuentos de salud, pensión y fondo de solidaridad.`,
+    intro: 'Escribe tu salario mensual y conoce cuánto llega a tu cuenta después de los descuentos de ley.',
+    inputs: [
+      { id: 'salario', label: 'Salario mensual', value: 3000000 },
+      AUX_INPUT,
+    ],
+    calc: ({ salario, aux }) => {
+      const n = salario / CO.smmlv;
+      const tasa = n < 4 ? 0 : n < 16 ? 1 : n <= 17 ? 1.2 : n <= 18 ? 1.4 : n <= 19 ? 1.6 : n <= 20 ? 1.8 : 2;
+      const salud = salario * 0.04, pension = salario * 0.04, fsp = (salario * tasa) / 100, ax = coAux(salario, aux);
+      return [['Salario neto', cop(salario - salud - pension - fsp + ax)], ['Salud (4%)', '− ' + cop(salud)], ['Pensión (4%)', '− ' + cop(pension)], [`Fondo de solidaridad (${fmt(tasa, 1)}%)`, '− ' + cop(fsp)], ['Auxilio de transporte', '+ ' + cop(ax)]];
+    },
+    article: `<h2>Descuentos de ley sobre el salario</h2>
+<p>A todo trabajador dependiente se le descuenta el <strong>4% para salud</strong> y el <strong>4% para pensión</strong>. El empleador aporta por su parte el 8,5% y el 12% respectivamente, que no salen de tu salario.</p>
+<p>Quienes ganan cuatro salarios mínimos o más aportan además al <strong>Fondo de Solidaridad Pensional</strong>: 1% entre 4 y 16 salarios mínimos, y de 1,2% a 2% por encima de ese nivel.</p>
+<p>El cálculo no incluye la retención en la fuente, que solo aplica a salarios altos y depende de tus deducciones personales, ni descuentos voluntarios como libranzas o aportes a cooperativas.</p>${CO_NOTE}`,
+    faq: [['¿Cuánto es el salario mínimo neto?', `Con el mínimo de ${YEAR} ($ ${fmt(CO.smmlv)}) se descuentan $ ${fmt(CO.smmlv * 0.08, 0)} de salud y pensión y se suman $ ${fmt(CO.aux)} de auxilio de transporte: recibes $ ${fmt(CO.smmlv * 0.92 + CO.aux, 0)}.`]],
+  },
+  {
+    slug: 'horas-extras-colombia', group: 'laboral', icon: '⏱️', name: `Calculadora de horas extras y recargos ${YEAR} (Colombia)`,
+    desc: `Calcula el valor de tus horas extras diurnas y nocturnas y de los recargos nocturnos, dominicales y festivos en Colombia ${YEAR}.`,
+    intro: 'Indica tu salario y las horas trabajadas de cada tipo para saber cuánto deben pagarte adicional este mes.',
+    inputs: [
+      { id: 'salario', label: 'Salario mensual', value: CO.smmlv },
+      { id: 'divisor', label: 'Horas mensuales de la jornada', value: 210 },
+      { id: 'hed', label: 'Horas extras diurnas', value: 4 },
+      { id: 'hen', label: 'Horas extras nocturnas', value: 0 },
+      { id: 'rn', label: 'Horas ordinarias nocturnas', value: 0 },
+      { id: 'df', label: 'Horas ordinarias en domingo o festivo', value: 0 },
+    ],
+    calc: ({ salario, divisor, hed, hen, rn, df }) => {
+      if (!(divisor > 0)) return null;
+      const h = salario / divisor;
+      const a = hed * h * 1.25, b = hen * h * 1.75, c = rn * h * 0.35, d = df * h * 0.9;
+      return [['Total adicional a pagar', cop(a + b + c + d)], ['Valor de la hora ordinaria', cop(h)], ['Extras diurnas (+25%)', cop(a)], ['Extras nocturnas (+75%)', cop(b)], ['Recargo nocturno (35%)', cop(c)], ['Recargo dominical/festivo (90%)', cop(d)]];
+    },
+    article: `<h2>Porcentajes vigentes</h2>
+<table><tr><th>Concepto</th><th>Recargo sobre la hora ordinaria</th></tr>
+<tr><td>Hora extra diurna</td><td>25%</td></tr><tr><td>Hora extra nocturna</td><td>75%</td></tr>
+<tr><td>Recargo nocturno (7:00 p. m. a 6:00 a. m.)</td><td>35%</td></tr>
+<tr><td>Recargo dominical o festivo</td><td>90% (desde el 1 de julio de 2026; 100% desde julio de 2027)</td></tr></table>
+<h2>Valor de la hora ordinaria</h2>
+<p>Se obtiene dividiendo el salario mensual entre las horas mensuales de la jornada. Con la jornada máxima de 42 horas semanales, vigente desde el 15 de julio de 2026, el divisor habitual es <strong>210</strong> (antes era 220). Si tu jornada pactada es distinta, cambia ese valor.</p>
+<p>Las horas extras se pagan completas con su recargo (hora × 1,25 o × 1,75). En las horas ordinarias nocturnas o dominicales solo se suma el recargo, porque la hora ya está incluida en tu salario. Si el domingo no hace parte de tu jornada habitual, además del recargo deben pagarte la hora o darte un descanso compensatorio.</p>${CO_NOTE}`,
+    faq: [['¿Cuántas horas extras se pueden trabajar?', 'Como regla general, máximo 2 horas diarias y 12 a la semana.']],
+  },
+  {
+    slug: 'aguinaldo-mexico', group: 'laboral', icon: '🎄', name: `Calculadora de aguinaldo ${YEAR} (México)`,
+    desc: `Calcula tu aguinaldo ${YEAR} en México, completo o proporcional a los días trabajados en el año.`,
+    intro: 'Escribe tu salario mensual y los días trabajados en el año para saber cuánto te corresponde de aguinaldo.',
+    inputs: [
+      { id: 'salario', label: 'Salario mensual bruto', value: 12000 },
+      { id: 'diasAg', label: 'Días de aguinaldo', value: 15 },
+      { id: 'dias', label: 'Días trabajados en el año', value: 365 },
+    ],
+    calc: ({ salario, diasAg, dias }) => {
+      const diario = salario / 30;
+      return [['Aguinaldo', '$ ' + fmt((diario * diasAg * dias) / 365)], ['Salario diario', '$ ' + fmt(diario)], ['Días de aguinaldo proporcionales', fmt((diasAg * dias) / 365, 1)]];
+    },
+    article: `<h2>¿Cómo se calcula el aguinaldo?</h2>
+<p>La Ley Federal del Trabajo establece un aguinaldo mínimo de <strong>15 días de salario</strong>, que debe pagarse antes del 20 de diciembre. Muchas empresas y el sector público otorgan más días; revisa tu contrato y cambia el valor si es tu caso.</p>
+<p>Fórmula: <strong>salario diario × días de aguinaldo × días trabajados ÷ 365</strong>. Si no trabajaste el año completo, o ya no trabajas en la empresa, tienes derecho a la parte proporcional.</p>
+<p>El resultado es bruto: una parte del aguinaldo está exenta de ISR y sobre el excedente tu empleador retiene el impuesto.</p>
+<p class="muted">Cálculo orientativo; no reemplaza la liquidación oficial de tu empleador.</p>`,
+    faq: [['¿Qué pasa si no me pagan el aguinaldo?', 'Puedes acudir a la PROFEDET para recibir asesoría gratuita y reclamarlo; tienes un año para hacerlo.']],
+  },
 ];
 
 // --------------------------------------------------- conversiones de unidades
@@ -408,9 +554,10 @@ for (const t of tools) {
     ],
     body: `<h1>${esc(t.name)}</h1><p class="lead">${esc(t.intro)}</p>
 ${form(t.slug, t.inputs)}
-${affiliate(t.slug)}${slotAd()}
+${affiliate(t.slug)}
 <article>${t.article}${faqHtml(t.faq)}</article>
-<h2>Otras calculadoras</h2>${toolCards(tools.filter(o => o !== t).slice(0, 6))}`,
+${slotAd()}
+<h2>Otras calculadoras</h2>${toolCards([...tools.filter(o => o !== t && o.group === t.group), ...tools.filter(o => o.group !== t.group)].slice(0, 6))}`,
   });
 }
 
@@ -432,12 +579,13 @@ for (const p of pairs) {
     ld: [faqLd(faq)],
     body: `<h1>Convertir ${esc(fromP)} a ${esc(toP)}</h1>
 <p class="lead">Escribe un valor en ${esc(fromP)} y obtén al instante su equivalencia en ${esc(toP)}.</p>
-${form('conv', convInputs(p))}${slotAd()}
+${form('conv', convInputs(p))}
 <article><h2>Fórmula</h2><p><strong>${p.formula}</strong>. ${one}.</p>
 <h2>Tabla de ${esc(fromP)} a ${esc(toP)}</h2>
 <table><tr><th>${Fp}</th><th>${toP[0].toUpperCase() + toP.slice(1)}</th></tr>${p.vals.map(row).join('')}</table>
 <p>¿Necesitas la conversión inversa? Usa el conversor de <a href="${href(hubUrl(rev))}">${U[rev.from][1]} a ${U[rev.to][1]}</a>.</p>
-${faqHtml(faq)}</article>`,
+${faqHtml(faq)}</article>
+${slotAd()}`,
   });
 
   p.vals.forEach((v, idx) => {
@@ -455,11 +603,12 @@ ${faqHtml(faq)}</article>`,
       ld: [faqLd([[`¿Cuánto son ${q} en ${toP}?`, `${q} equivalen a ${ans}.`]])],
       body: `<h1>¿Cuánto son ${esc(q)} en ${esc(toP)}?</h1>
 <p class="answer">${esc(q)} = <strong>${esc(ans)}</strong></p>
-${form('conv', convInputs(p), { valor: v })}${slotAd()}
+${form('conv', convInputs(p), { valor: v })}
 <article><h2>Cómo se calcula</h2><p>La fórmula para pasar de ${esc(fromP)} a ${esc(toP)} es <strong>${p.formula}</strong>.</p><p>${step}</p>
 <h2>Valores cercanos</h2>
 <table><tr><th>${Fp}</th><th>${toP[0].toUpperCase() + toP.slice(1)}</th></tr>${near.map(row).join('')}</table>
-<p>Consulta la <a href="${href(hubUrl(p))}">tabla completa de ${esc(fromP)} a ${esc(toP)}</a> o la conversión inversa: <a href="${href(hubUrl(rev))}">${U[rev.from][1]} a ${U[rev.to][1]}</a>.</p></article>`,
+<p>Consulta la <a href="${href(hubUrl(p))}">tabla completa de ${esc(fromP)} a ${esc(toP)}</a> o la conversión inversa: <a href="${href(hubUrl(rev))}">${U[rev.from][1]} a ${U[rev.to][1]}</a>.</p></article>
+${slotAd()}`,
     });
   });
 }
@@ -482,7 +631,7 @@ for (const p of PCTS) for (const b of BASES) {
     ld: [faqLd([[`¿Cuánto es el ${p}% de ${fmt(b)}?`, `El ${p}% de ${fmt(b)} es ${fmt(r)}.`]])],
     body: `<h1>¿Cuánto es el ${p}% de ${fmt(b)}?</h1>
 <p class="answer">El ${p}% de ${fmt(b)} es <strong>${fmt(r)}</strong></p>
-${form('porcentajes', pctInputs, { pct: p, cantidad: b })}${slotAd()}
+${form('porcentajes', pctInputs, { pct: p, cantidad: b })}
 <article><h2>Cálculo paso a paso</h2>
 <p>Multiplica la cantidad por el porcentaje y divide entre 100: ${fmt(b)} × ${p} ÷ 100 = <strong>${fmt(r)}</strong>.</p>
 <ul><li>${fmt(b)} más el ${p}% = <strong>${fmt(b + r)}</strong> (por ejemplo, al añadir un impuesto o un aumento).</li>
@@ -490,7 +639,8 @@ ${form('porcentajes', pctInputs, { pct: p, cantidad: b })}${slotAd()}
 <h2>Otros porcentajes de ${fmt(b)}</h2>
 <table><tr><th>Porcentaje</th><th>Resultado</th></tr>${PCTS.filter(x => x !== p).map(x => `<tr><td><a href="${href(pctUrl(x, b))}">${x}% de ${fmt(b)}</a></td><td>${fmt((b * x) / 100)}</td></tr>`).join('')}</table>
 <h2>El ${p}% de otras cantidades</h2>
-<table><tr><th>Cantidad</th><th>${p}%</th></tr>${BASES.filter(x => x !== b).map(x => `<tr><td><a href="${href(pctUrl(p, x))}">${p}% de ${fmt(x)}</a></td><td>${fmt((x * p) / 100)}</td></tr>`).join('')}</table></article>`,
+<table><tr><th>Cantidad</th><th>${p}%</th></tr>${BASES.filter(x => x !== b).map(x => `<tr><td><a href="${href(pctUrl(p, x))}">${p}% de ${fmt(x)}</a></td><td>${fmt((x * p) / 100)}</td></tr>`).join('')}</table></article>
+${slotAd()}`,
   });
 }
 page({
@@ -508,7 +658,8 @@ page({
   ld: [{ '@context': 'https://schema.org', '@type': 'WebSite', name: cfg.siteName, url: abs('/'), inLanguage: 'es' }],
   body: `<h1>${esc(cfg.tagline)}</h1>
 <p class="lead">Herramientas simples para tus cuentas del día a día: finanzas, porcentajes, salud, fechas y conversiones.</p>
-<h2 id="calculadoras">Calculadoras</h2>${toolCards(tools)}
+<h2 id="calculadoras">Calculadoras</h2>${toolCards(tools.filter(t => !t.group))}
+<h2 id="laborales">Calculadoras laborales ${YEAR}</h2>${toolCards(tools.filter(t => t.group === 'laboral'))}
 ${slotAd()}
 <h2>Conversores de unidades</h2>
 <p class="links">${pairs.map(p => `<a href="${href(hubUrl(p))}">${U[p.from][1]} a ${U[p.to][1]}</a>`).join('')}</p>
@@ -535,6 +686,9 @@ fs.copyFileSync(path.join(OUT, '404', 'index.html'), path.join(OUT, '404.html'))
 const CONV = Object.fromEntries(pairs.map(p => [p.slug, { k: p.k, pre: p.pre, post: p.post, from: U[p.from][3], to: U[p.to][3] }]));
 write('assets/tools.js', `const fmt=(n,d=2)=>Number(n).toLocaleString('es',{maximumFractionDigits:d,useGrouping:'always'});
 const CONV=${JSON.stringify(CONV)};
+const CO=${JSON.stringify(CO)};
+const coAux=(salario,aux)=>aux==='si'||(aux==='auto'&&salario<=2*CO.smmlv)?CO.aux:0;
+const cop=n=>'$ '+fmt(n,0);
 const TOOLS={${tools.map(t => `${JSON.stringify(t.slug)}:${t.calc.toString()}`).join(',\n')},
 conv:({valor,par})=>{const c=CONV[par];return [[fmt(valor,4)+' '+c.from+' =',fmt((valor+c.pre)*c.k+c.post,4)+' '+c.to]];}};
 `);

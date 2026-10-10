@@ -4,7 +4,7 @@ Sitio estático de calculadoras y conversores en español, pensado para captar t
 
 ## Qué incluye
 
-- 12 calculadoras interactivas (interés compuesto, préstamos, meta de ahorro, porcentajes, descuentos, IVA, IMC, regla de tres, propina, días entre fechas, edad, divisas).
+- 18 calculadoras interactivas: 12 generales (interés compuesto, préstamos, meta de ahorro, porcentajes, descuentos, IVA, IMC, regla de tres, propina, días entre fechas, edad, divisas) y 6 laborales (Colombia: prima, cesantías, liquidación, salario neto, horas extras; México: aguinaldo). Los valores legales de Colombia están en la constante `CO` de `build.mjs` y deben actualizarse cada enero.
 - ~600 páginas de conversiones (`/convertir/150-libras-a-kilos/`) y ~380 de porcentajes (`/porcentaje/15-por-ciento-de-200/`), cada una con respuesta, fórmula, tabla y calculadora.
 - SEO técnico: canonical, Open Graph, datos estructurados, `sitemap.xml`, `robots.txt`, modo claro/oscuro, responsive.
 - Páginas legales (privacidad, términos, contacto, acerca de) que exigen las redes de anuncios.
