@@ -11,6 +11,7 @@ const B = new URL(SITE).pathname.replace(/\/$/, '');
 const OUT = path.join(ROOT, 'dist');
 const TODAY = new Date().toISOString().slice(0, 10);
 const YEAR = TODAY.slice(0, 4);
+const MONTH = new Date().toLocaleDateString('es', { month: 'long', year: 'numeric' });
 
 const fmt = (n, d = 2) => Number(n).toLocaleString('es', { maximumFractionDigits: d, useGrouping: 'always' });
 const num = n => { const a = Math.abs(n); return fmt(n, a >= 100 ? 2 : a >= 1 ? 3 : 5); };
@@ -60,6 +61,7 @@ ${index ? '' : '<meta name="robots" content="noindex">'}
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="${esc(cfg.siteName)}">
 ${cfg.googleSiteVerification ? `<meta name="google-site-verification" content="${esc(cfg.googleSiteVerification)}">` : ''}
+<meta name="theme-color" content="#0b6e4f">
 <link rel="icon" href="${href('/assets/favicon.svg')}" type="image/svg+xml">
 <link rel="stylesheet" href="${href('/assets/style.css')}?v=${V}">
 ${ld.map(o => `<script type="application/ld+json">${JSON.stringify(o).replace(/</g, '\\u003c')}</script>`).join('\n')}
@@ -68,15 +70,19 @@ ${cfg.ads?.headHtml || ''}
 ${cfg.analyticsHtml || ''}
 </head>
 <body>
-<header><div class="wrap"><a class="logo" href="${href('/')}">${esc(cfg.siteName)}</a>
-<nav><a href="${href('/#calculadoras')}">Calculadoras</a><a href="${href('/convertir/')}">Conversores</a><a href="${href('/porcentaje/')}">Porcentajes</a></nav></div></header>
-<main class="wrap">
+<a class="skip" href="#contenido">Saltar al contenido</a>
+<header><div class="wrap"><a class="logo" href="${href('/')}">${LOGO}<span>${esc(cfg.siteName)}</span></a>
+<nav aria-label="Principal"><a href="${href('/#laborales')}">Salario</a><a href="${href('/#calculadoras')}">Finanzas</a><a href="${href('/convertir/')}">Conversores</a><a href="${href('/porcentaje/')}">Porcentajes</a></nav></div></header>
+<main class="wrap" id="contenido">
 ${crumbs.length ? `<p class="crumbs">${trail.map(([n, u], i) => (i < trail.length - 1 ? `<a href="${href(u)}">${esc(n)}</a>` : esc(n))).join(' › ')}</p>` : ''}
 ${body}
 </main>
-<footer><div class="wrap"><p>© ${YEAR} ${esc(cfg.siteName)} · ${esc(cfg.tagline)}</p>
-<p><a href="${href('/acerca/')}">Acerca de</a> · <a href="${href('/privacidad/')}">Privacidad</a> · <a href="${href('/terminos/')}">Términos</a> · <a href="${href('/contacto/')}">Contacto</a></p>
-<p class="muted">Los resultados son orientativos y no constituyen asesoría financiera, fiscal ni médica.</p></div></footer>
+<footer><div class="wrap cols">
+<div><a class="logo" href="${href('/')}">${LOGO}<span>${esc(cfg.siteName)}</span></a><p class="muted">${esc(cfg.tagline)}.</p></div>
+<div><strong>Más usadas</strong>${tools.filter(t => ['prima-de-servicios-colombia', 'liquidacion-colombia', 'interes-compuesto', 'prestamo', 'iva'].includes(t.slug)).map(t => `<a href="${href(toolUrl(t))}">${esc(cap(shortName(t)))}</a>`).join('')}</div>
+<div><strong>Explorar</strong><a href="${href('/convertir/')}">Conversores de unidades</a><a href="${href('/porcentaje/')}">Tablas de porcentajes</a><a href="${href('/conversor-de-divisas/')}">Conversor de divisas</a></div>
+<div><strong>${esc(cfg.siteName)}</strong><a href="${href('/acerca/')}">Acerca de</a><a href="${href('/contacto/')}">Contacto</a><a href="${href('/privacidad/')}">Privacidad</a><a href="${href('/terminos/')}">Términos</a></div>
+</div><div class="wrap"><p class="muted">© ${YEAR} ${esc(cfg.siteName)}. Los resultados son orientativos y no constituyen asesoría financiera, fiscal, legal ni médica.</p></div></footer>
 <script src="${href('/assets/tools.js')}?v=${V}" defer></script>
 <script src="${href('/assets/app.js')}?v=${V}" defer></script>
 </body>
@@ -85,18 +91,27 @@ ${body}
   if (index) urls.push(url);
 }
 
-function form(tool, inputs, over = {}) {
+const LOGO = '<svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true"><rect width="64" height="64" rx="16" fill="currentColor"/><path d="M20 22h24M20 32h24M20 42h12" stroke="#fff" stroke-width="6" stroke-linecap="round"/></svg>';
+const MONEY = new Set(['capital', 'aporte', 'monto', 'salario', 'meta', 'inicial', 'precio', 'cuenta']);
+
+function form(tool, inputs, over = {}, { persist = false } = {}) {
   const fields = inputs.map(i => {
     const val = over[i.id] ?? i.value ?? '';
     if (i.type === 'hidden') return `<input type="hidden" name="${i.id}" value="${esc(val)}">`;
+    // "Tasa (%)" → etiqueta "Tasa" con la unidad dentro del campo
+    const [, label, suf] = i.label.match(/^(.*) \((%|kg|cm|meses)\)$/) || [, i.label, ''];
+    const money = MONEY.has(i.id) && tool !== 'conversor-de-divisas';
     const ctl = i.type === 'select'
       ? `<select name="${i.id}">${i.options.map(([v, l]) => `<option value="${esc(v)}"${String(v) === String(val) ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`
       : i.type === 'date'
         ? `<input type="date" name="${i.id}"${i.today ? ' data-today' : ''}>`
-        : `<input type="number" inputmode="decimal" step="any" name="${i.id}" value="${esc(val)}">`;
-    return `<label>${esc(i.label)}${ctl}</label>`;
+        : `<span class="field">${money ? '<i>$</i>' : ''}<input type="number" inputmode="decimal" step="any" name="${i.id}" value="${esc(val)}"${money ? ' data-money' : ''}>${suf ? `<i>${suf}</i>` : ''}</span>${money ? '<small class="hint"></small>' : ''}`;
+    return `<label><span>${esc(label)}</span>${ctl}</label>`;
   }).join('');
-  return `<div class="calc"><form data-tool="${tool}">${fields}</form><div class="result" aria-live="polite"></div></div>`;
+  return `<div class="calc"><form data-tool="${tool}"${persist ? ' data-persist' : ''} novalidate>${fields}</form>
+<div class="result" aria-live="polite"></div>
+<div class="actions" hidden><button type="button" data-act="copy">Copiar resultado</button><button type="button" data-act="share">Compartir enlace</button><a data-act="wa" target="_blank" rel="noopener">Enviar por WhatsApp</a></div>
+<ul class="trust"><li>Gratis y sin registro</li><li>Lo que escribes no sale de tu dispositivo</li><li>Revisada en ${MONTH}</li></ul></div>`;
 }
 
 const faqHtml = faq => (faq?.length ? `<h2>Preguntas frecuentes</h2>${faq.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${a}</p></details>`).join('')}` : '');
@@ -130,7 +145,7 @@ const tools = [
       const i = tasa / 100 / 12, n = Math.round(anios * 12);
       const fv = i ? capital * (1 + i) ** n + aporte * (((1 + i) ** n - 1) / i) : capital + aporte * n;
       const ap = capital + aporte * n;
-      return [['Valor final', fmt(fv)], ['Total aportado', fmt(ap)], ['Intereses ganados', fmt(fv - ap)]];
+      return Object.assign([['Valor final', fmt(fv)], ['Total aportado', fmt(ap)], ['Intereses ganados', fmt(fv - ap)]], { bars: [['Lo que aportas', ap], ['Intereses', fv - ap]] });
     },
     article: `<h2>¿Qué es el interés compuesto?</h2>
 <p>El interés compuesto es el interés que se calcula sobre el capital inicial <em>y también</em> sobre los intereses acumulados de periodos anteriores. A diferencia del interés simple, tus ganancias generan nuevas ganancias, por eso el crecimiento se acelera con el tiempo.</p>
@@ -155,7 +170,7 @@ const tools = [
       if (!(meses > 0)) return null;
       const i = tasa / 100 / 12;
       const cuota = i ? (monto * i) / (1 - (1 + i) ** -meses) : monto / meses;
-      return [['Cuota mensual', fmt(cuota)], ['Total a pagar', fmt(cuota * meses)], ['Total de intereses', fmt(cuota * meses - monto)]];
+      return Object.assign([['Cuota mensual', fmt(cuota)], ['Total a pagar', fmt(cuota * meses)], ['Total de intereses', fmt(cuota * meses - monto)]], { bars: [['Capital', monto], ['Intereses', cuota * meses - monto]] });
     },
     article: `<h2>¿Cómo se calcula la cuota de un préstamo?</h2>
 <p>La mayoría de créditos personales, hipotecarios y de vehículo usan el <strong>sistema francés</strong>: una cuota fija durante todo el plazo. Al principio la mayor parte de la cuota son intereses y, con el tiempo, cada vez se amortiza más capital.</p>
@@ -215,7 +230,7 @@ const tools = [
       { id: 'precio', label: 'Precio original', value: 80 },
       { id: 'desc', label: 'Descuento (%)', value: 25 },
     ],
-    calc: ({ precio, desc }) => [['Precio final', fmt(precio * (1 - desc / 100))], ['Ahorras', fmt((precio * desc) / 100)]],
+    calc: ({ precio, desc }) => Object.assign([['Precio final', fmt(precio * (1 - desc / 100))], ['Ahorras', fmt((precio * desc) / 100)]], { bars: [['Pagas', precio * (1 - desc / 100)], ['Ahorras', (precio * desc) / 100]] }),
     article: `<h2>Cómo calcular un descuento</h2>
 <p>Multiplica el precio por el porcentaje de descuento y divide entre 100: ese es tu ahorro. Réstalo del precio original para obtener el precio final. Por ejemplo, un artículo de 80 con 25% de descuento cuesta 80 − 20 = <strong>60</strong>.</p>
 <p>Ojo con los descuentos acumulados: un 20% más un 10% adicional no es un 30%, sino un 28%, porque el segundo descuento se aplica sobre el precio ya rebajado.</p>`,
@@ -258,7 +273,7 @@ const tools = [
       if (!(altura > 0) || !(peso > 0)) return null;
       const m = altura / 100, imc = peso / (m * m);
       const cat = imc < 18.5 ? 'Bajo peso' : imc < 25 ? 'Peso normal' : imc < 30 ? 'Sobrepeso' : 'Obesidad';
-      return [['Tu IMC', fmt(imc, 1)], ['Categoría (OMS)', cat], ['Peso saludable para tu estatura', `${fmt(18.5 * m * m, 1)} – ${fmt(24.9 * m * m, 1)} kg`]];
+      return Object.assign([['Tu IMC', fmt(imc, 1)], ['Categoría (OMS)', cat], ['Peso saludable para tu estatura', `${fmt(18.5 * m * m, 1)} – ${fmt(24.9 * m * m, 1)} kg`]], { marker: Math.min(100, Math.max(0, ((imc - 15) / 25) * 100)) });
     },
     article: `<h2>¿Qué es el IMC?</h2>
 <p>El índice de masa corporal relaciona tu peso con tu estatura: <strong>IMC = peso (kg) ÷ estatura² (m)</strong>. La Organización Mundial de la Salud lo usa como indicador general para adultos.</p>
@@ -418,7 +433,7 @@ const tools = [
       const base = salario + coAux(salario, aux);
       const ces = (base * diasAnio) / 360, int = (ces * diasAnio * 0.12) / 360;
       const prima = (base * diasSem) / 360, vac = (salario * diasVac) / 720;
-      return [['Total liquidación', cop(ces + int + prima + vac)], ['Cesantías', cop(ces)], ['Intereses sobre cesantías', cop(int)], ['Prima de servicios', cop(prima)], ['Vacaciones', cop(vac)]];
+      return Object.assign([['Total liquidación', cop(ces + int + prima + vac)], ['Cesantías', cop(ces)], ['Intereses sobre cesantías', cop(int)], ['Prima de servicios', cop(prima)], ['Vacaciones', cop(vac)]], { bars: [['Cesantías', ces], ['Intereses', int], ['Prima', prima], ['Vacaciones', vac]] });
     },
     article: `<h2>¿Qué incluye la liquidación?</h2>
 <p>Al terminar un contrato laboral, el empleador debe pagar las prestaciones causadas y no pagadas:</p>
@@ -444,7 +459,7 @@ const tools = [
       const n = salario / CO.smmlv;
       const tasa = n < 4 ? 0 : n < 16 ? 1 : n <= 17 ? 1.2 : n <= 18 ? 1.4 : n <= 19 ? 1.6 : n <= 20 ? 1.8 : 2;
       const salud = salario * 0.04, pension = salario * 0.04, fsp = (salario * tasa) / 100, ax = coAux(salario, aux);
-      return [['Salario neto', cop(salario - salud - pension - fsp + ax)], ['Salud (4%)', '− ' + cop(salud)], ['Pensión (4%)', '− ' + cop(pension)], [`Fondo de solidaridad (${fmt(tasa, 1)}%)`, '− ' + cop(fsp)], ['Auxilio de transporte', '+ ' + cop(ax)]];
+      return Object.assign([['Salario neto', cop(salario - salud - pension - fsp + ax)], ['Salud (4%)', '− ' + cop(salud)], ['Pensión (4%)', '− ' + cop(pension)], [`Fondo de solidaridad (${fmt(tasa, 1)}%)`, '− ' + cop(fsp)], ['Auxilio de transporte', '+ ' + cop(ax)]], { bars: [['Recibes', salario - salud - pension - fsp + ax], ['Salud', salud], ['Pensión', pension], ['Solidaridad', fsp]] });
     },
     article: `<h2>Descuentos de ley sobre el salario</h2>
 <p>A todo trabajador dependiente se le descuenta el <strong>4% para salud</strong> y el <strong>4% para pensión</strong>. El empleador aporta por su parte el 8,5% y el 12% respectivamente, que no salen de tu salario.</p>
@@ -544,7 +559,10 @@ const pctUrl = (p, b) => `/porcentaje/${p}-por-ciento-de-${b}/`;
 // ===================================================================== build
 fs.rmSync(OUT, { recursive: true, force: true });
 const toolUrl = t => `/${t.slug}/`;
-const toolCards = list => `<div class="grid">${list.map(t => `<a class="card" href="${href(toolUrl(t))}"><span class="ico">${t.icon}</span><strong>${esc(t.name)}</strong></a>`).join('')}</div>`;
+const shortName = t => t.name.replace(/^Calculadora de /, '').replace(/ \d{4}/, '').replace(/ \((Colombia|México)\)/, '');
+const country = t => (t.name.match(/\((Colombia|México)\)/) || [])[1];
+const cap = s => s[0].toUpperCase() + s.slice(1);
+const toolCards = list => `<div class="grid">${list.map(t => `<a class="card" href="${href(toolUrl(t))}" data-search="${esc(`${t.name} ${t.desc}`)}"><span class="ico" aria-hidden="true">${t.icon}</span><strong>${esc(cap(shortName(t)))}</strong>${country(t) ? `<em class="chip">${country(t)}</em>` : ''}<span class="muted">${esc(t.intro)}</span></a>`).join('')}</div>`;
 
 // Calculadoras
 for (const t of tools) {
@@ -556,7 +574,8 @@ for (const t of tools) {
       ...(t.faq.length ? [faqLd(t.faq)] : []),
     ],
     body: `<h1>${esc(t.name)}</h1><p class="lead">${esc(t.intro)}</p>
-${form(t.slug, t.inputs)}
+${form(t.slug, t.inputs, {}, { persist: true })}
+<div hidden id="tool-meta" data-href="${href(toolUrl(t))}" data-icon="${t.icon}" data-name="${esc(cap(shortName(t)))}"></div>
 ${affiliate(t.slug)}
 <article>${t.article}${faqHtml(t.faq)}</article>
 ${slotAd()}
@@ -659,10 +678,17 @@ page({
   url: '/', title: `${cfg.siteName}: ${cfg.tagline}`,
   desc: 'Calculadoras online gratis en español: interés compuesto, préstamos, IVA, porcentajes, IMC, conversor de divisas y de unidades. Sin registro.',
   ld: [{ '@context': 'https://schema.org', '@type': 'WebSite', name: cfg.siteName, url: abs('/'), inLanguage: 'es' }],
-  body: `<h1>${esc(cfg.tagline)}</h1>
-<p class="lead">Herramientas simples para tus cuentas del día a día: finanzas, porcentajes, salud, fechas y conversiones.</p>
-<h2 id="calculadoras">Calculadoras</h2>${toolCards(tools.filter(t => !t.group))}
-<h2 id="laborales">Calculadoras laborales ${YEAR}</h2>${toolCards(tools.filter(t => t.group === 'laboral'))}
+  body: `<section class="hero"><h1>Haz tus cuentas en segundos</h1>
+<p class="lead">Calculadoras claras para tu salario, tus ahorros, tus créditos y tu día a día. Gratis, sin registro y con la fórmula explicada.</p>
+<label class="search"><span class="sr">Buscar calculadora</span><input type="search" id="q" placeholder="¿Qué quieres calcular? Ej.: prima, préstamo, IVA…" autocomplete="off"></label>
+<p class="links">${['prima-de-servicios-colombia', 'liquidacion-colombia', 'salario-neto-colombia', 'interes-compuesto', 'prestamo', 'iva'].map(sl => tools.find(t => t.slug === sl)).map(t => `<a href="${href(toolUrl(t))}">${esc(cap(shortName(t)))}</a>`).join('')}</p></section>
+<section id="recientes" hidden><h2>Continúa donde lo dejaste</h2><div class="grid"></div></section>
+<p id="noresults" class="muted" hidden>No encontramos esa calculadora. Prueba con otra palabra o revisa los <a href="${href('/convertir/')}">conversores de unidades</a>.</p>
+<section><h2 id="laborales">Salario y trabajo ${YEAR}</h2>${toolCards(tools.filter(t => t.group === 'laboral'))}</section>
+<section><h2 id="calculadoras">Finanzas y día a día</h2>${toolCards(tools.filter(t => !t.group))}</section>
+<section class="why"><div><strong>Claras</strong><p>Cada resultado viene con su fórmula y un ejemplo, para que entiendas de dónde sale el número.</p></div>
+<div><strong>Privadas</strong><p>Los cálculos se hacen en tu dispositivo. No pedimos correo ni registro.</p></div>
+<div><strong>Al día</strong><p>Las calculadoras laborales usan los valores legales de ${YEAR} y se revisan cada año.</p></div></section>
 ${slotAd()}
 <h2>Conversores de unidades</h2>
 <p class="links">${pairs.map(p => `<a href="${href(hubUrl(p))}">${U[p.from][1]} a ${U[p.to][1]}</a>`).join('')}</p>
