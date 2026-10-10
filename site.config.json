@@ -9,13 +9,17 @@
   },
   "ads": {
     "headHtml": "",
-    "slotHtml": ""
+    "slotHtml": "<script async=\"async\" data-cfasync=\"false\" src=\"https://bauval.org/21/28cea34bf8e251658c2e99ae14cf6c03\"></script><div id=\"container-28cea34bf8e251658c2e99ae14cf6c03\"></div>"
   },
   "analyticsHtml": "",
   "affiliates": [
     {
       "enabled": false,
-      "tools": ["interes-compuesto", "meta-de-ahorro", "prestamo"],
+      "tools": [
+        "interes-compuesto",
+        "meta-de-ahorro",
+        "prestamo"
+      ],
       "title": "Recomendado",
       "text": "Describe aquí el producto o servicio afiliado (curso, app, libro...).",
       "url": "https://tu-enlace-de-afiliado.example"
