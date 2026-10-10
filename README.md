@@ -4,10 +4,29 @@ Sitio estático de calculadoras y conversores en español, pensado para captar t
 
 ## Qué incluye
 
-- 18 calculadoras interactivas: 12 generales (interés compuesto, préstamos, meta de ahorro, porcentajes, descuentos, IVA, IMC, regla de tres, propina, días entre fechas, edad, divisas) y 6 laborales (Colombia: prima, cesantías, liquidación, salario neto, horas extras; México: aguinaldo). Los valores legales de Colombia están en la constante `CO` de `build.mjs` y deben actualizarse cada enero.
-- ~600 páginas de conversiones (`/convertir/150-libras-a-kilos/`) y ~380 de porcentajes (`/porcentaje/15-por-ciento-de-200/`), cada una con respuesta, fórmula, tabla y calculadora.
-- SEO técnico: canonical, Open Graph, datos estructurados, `sitemap.xml`, `robots.txt`, modo claro/oscuro, responsive.
-- Páginas legales (privacidad, términos, contacto, acerca de) que exigen las redes de anuncios.
+El sitio se organiza en cuatro categorías, cada una con su página índice:
+
+| Categoría | Ruta | Contenido |
+|---|---|---|
+| Salario y trabajo | `/salario/` | Prima, cesantías, liquidación, salario neto y horas extras (Colombia); aguinaldo (México) |
+| Finanzas personales | `/finanzas/` | Interés compuesto, préstamos, meta de ahorro, IVA, descuentos, porcentajes, divisas |
+| Catastro y SIG | `/catastro/` | Decodificador y validador por lotes del número predial nacional; enlaces a los complementos de QGIS y a servicios |
+| Utilidades | `/utilidades/` | IMC, regla de tres, propina, fechas, edad y conversores de unidades |
+
+Además: ~600 páginas de conversiones (`/convertir/...`) y ~380 de porcentajes (`/porcentaje/...`), páginas legales, sitemap, datos estructurados, modo claro/oscuro y versión imprimible (botón "Guardar PDF").
+
+## Estructura del código
+
+| Archivo | Qué contiene |
+|---|---|
+| `site.config.json` | URL, correo, anuncios, analítica y afiliados |
+| `build.mjs` | Plantilla HTML, categorías y generación de todas las páginas |
+| `src/core.mjs` | Configuración y utilidades compartidas |
+| `src/calculadoras.mjs` | Cada calculadora: campos, fórmula y textos. Aquí están los valores legales de Colombia (`CO`), que se actualizan cada enero |
+| `src/unidades.mjs` | Datos de las páginas de conversiones y porcentajes |
+| `data/dane.json` | Departamentos y municipios (códigos DANE) |
+| `static/` | Estilos y scripts del navegador (`app.js` general, `npn.js` catastro) |
+| `public/` | Archivos que van en la raíz del sitio (verificaciones de buscadores) |
 
 ## Comandos
 
@@ -45,7 +64,7 @@ Para previsualizar en local con rutas correctas: `SITE_URL=http://localhost:4173
 
 1. **Google Search Console** (search.google.com/search-console): añade la URL, pega el código en `googleSiteVerification`, publica y envía `sitemap.xml`. Haz lo mismo en Bing Webmaster Tools.
 2. **Monetización**: ver la sección siguiente.
-3. **Crecer**: añade calculadoras en el array `tools` de `build.mjs` y pares de unidades en `pairs`; cada entrada genera sus páginas y entra sola al sitemap.
+3. **Crecer**: añade calculadoras en el array `tools` de `src/calculadoras.mjs` y pares de unidades en `pairs` de `src/unidades.mjs`; cada entrada genera sus páginas y entra sola al sitemap.
 
 ## Monetización sin inversión
 
@@ -54,4 +73,4 @@ Para previsualizar en local con rutas correctas: `SITE_URL=http://localhost:4173
 
 ## Añadir una calculadora
 
-En `build.mjs`, agrega un objeto a `tools` con `slug`, `name`, `desc`, `intro`, `inputs`, `calc`, `article` y `faq`. La función `calc` corre en el navegador: recibe los valores del formulario y devuelve filas `[etiqueta, valor]`; solo puede usar `fmt`.
+En `src/calculadoras.mjs`, agrega un objeto a `tools` con `slug`, `name`, `desc`, `intro`, `inputs`, `calc`, `article` y `faq`. La función `calc` corre en el navegador: recibe los valores del formulario y devuelve filas `[etiqueta, valor]`; solo puede usar `fmt`.

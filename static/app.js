@@ -113,6 +113,10 @@ document.querySelectorAll('form[data-tool]').forEach(form => {
       if (navigator.share) navigator.share({ title: document.title, text: summary(), url: shareUrl() }).catch(() => {});
       else copy(btn, shareUrl());
     }
+    if (btn.dataset.act === 'print') {
+      document.getElementById('print-date').textContent = new Date().toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' });
+      window.print();
+    }
     if (btn.dataset.act === 'wa') btn.href = 'https://wa.me/?text=' + encodeURIComponent(`${summary()}\n\n${shareUrl()}`);
   });
   form.addEventListener('input', run);
