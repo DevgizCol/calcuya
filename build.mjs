@@ -543,6 +543,8 @@ for (const f of fs.readdirSync(path.join(ROOT, 'static'))) fs.copyFileSync(path.
 write('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${abs('/sitemap.xml')}\n`);
 write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(u => `<url><loc>${abs(u)}</loc><lastmod>${TODAY}</lastmod></url>`).join('\n')}\n</urlset>\n`);
 if (cfg.adsense?.client) write('ads.txt', `google.com, ${cfg.adsense.client.replace('ca-', '')}, DIRECT, f08c47fec0942fa0\n`);
+// Archivos que deben quedar en la raíz del sitio (verificaciones de buscadores, etc.)
+fs.cpSync(path.join(ROOT, 'public'), OUT, { recursive: true });
 write('.nojekyll', '');
 
 console.log(`✔ ${urls.length} páginas generadas en dist/ para ${SITE}`);
