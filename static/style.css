@@ -122,3 +122,15 @@ footer{background:var(--card);border-top:1px solid var(--line);padding:32px 0 20
   .actions button,.actions a{flex:1 1 auto;text-align:center}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+textarea{font:inherit;color:inherit;width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);resize:vertical;font-family:ui-monospace,Consolas,monospace;font-size:.92rem}
+textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft);outline:0}
+#npn{font-family:ui-monospace,Consolas,monospace;letter-spacing:.04em}
+.actions .primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.npn-segs{display:flex;flex-wrap:wrap;gap:4px;margin:12px 0;font:600 1.05rem ui-monospace,Consolas,monospace}
+.npn-segs span,td b{background:hsl(var(--h) 60% 50%/.2);border-radius:6px;padding:4px 7px;font-family:ui-monospace,Consolas,monospace}
+.npn-err{color:#c0392b;font-weight:600}
+.scroll{overflow-x:auto;border-radius:12px}
+.scroll table{font-size:.85rem;white-space:nowrap}
+tr.bad td{background:rgba(217,83,79,.12)}
+tr.warn td{background:rgba(233,162,59,.14)}

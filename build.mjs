@@ -19,8 +19,9 @@ const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(
 const href = p => B + p;
 const abs = p => SITE + p;
 const urls = [];
+const DANE = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'dane.json'), 'utf8'));
 // Versión de los assets: cambia cuando cambia el código, para que el navegador no use copias en caché
-const V = createHash('sha1').update(fs.readFileSync(fileURLToPath(import.meta.url))).update(fs.readdirSync(path.join(ROOT, 'static')).map(f => fs.readFileSync(path.join(ROOT, 'static', f))).join('')).digest('hex').slice(0, 8);
+const V = createHash('sha1').update(fs.readFileSync(fileURLToPath(import.meta.url))).update(fs.readFileSync(path.join(ROOT, 'data', 'dane.json'))).update(fs.readdirSync(path.join(ROOT, 'static')).map(f => fs.readFileSync(path.join(ROOT, 'static', f))).join('')).digest('hex').slice(0, 8);
 
 function write(rel, content) {
   const f = path.join(OUT, rel);
@@ -38,7 +39,7 @@ function affiliate(slug) {
     .join('');
 }
 
-function page({ url, title, desc, body, crumbs = [], ld = [], index = true }) {
+function page({ url, title, desc, body, crumbs = [], ld = [], index = true, scripts = [] }) {
   const trail = [['Inicio', '/'], ...crumbs];
   if (crumbs.length) {
     ld.push({
@@ -72,7 +73,7 @@ ${cfg.analyticsHtml || ''}
 <body>
 <a class="skip" href="#contenido">Saltar al contenido</a>
 <header><div class="wrap"><a class="logo" href="${href('/')}">${LOGO}<span>${esc(cfg.siteName)}</span></a>
-<nav aria-label="Principal"><a href="${href('/#laborales')}">Salario</a><a href="${href('/#calculadoras')}">Finanzas</a><a href="${href('/convertir/')}">Conversores</a><a href="${href('/porcentaje/')}">Porcentajes</a></nav></div></header>
+<nav aria-label="Principal"><a href="${href('/#laborales')}">Salario</a><a href="${href('/#calculadoras')}">Finanzas</a><a href="${href('/catastro/numero-predial-nacional/')}">Catastro</a><a href="${href('/convertir/')}">Conversores</a><a href="${href('/porcentaje/')}">Porcentajes</a></nav></div></header>
 <main class="wrap" id="contenido">
 ${crumbs.length ? `<p class="crumbs">${trail.map(([n, u], i) => (i < trail.length - 1 ? `<a href="${href(u)}">${esc(n)}</a>` : esc(n))).join(' › ')}</p>` : ''}
 ${body}
@@ -85,6 +86,7 @@ ${body}
 </div><div class="wrap"><p class="muted">© ${YEAR} ${esc(cfg.siteName)}. Los resultados son orientativos y no constituyen asesoría financiera, fiscal, legal ni médica.</p></div></footer>
 <script src="${href('/assets/tools.js')}?v=${V}" defer></script>
 <script src="${href('/assets/app.js')}?v=${V}" defer></script>
+${scripts.map(f => `<script src="${href(`/assets/${f}`)}?v=${V}" defer></script>`).join('\n')}
 </body>
 </html>`;
   write(path.join(url, 'index.html'), html);
@@ -583,6 +585,67 @@ ${slotAd()}
   });
 }
 
+// ------------------------------------------------------------- catastro (Colombia)
+const NPN = {
+  slug: 'catastro/numero-predial-nacional', group: 'catastro', icon: '🗺️',
+  name: 'Decodificador de número predial nacional (NPN)',
+  desc: 'Decodifica y valida el número predial nacional (NPN) de 30 o 22 dígitos de Colombia: departamento, municipio, zona, manzana, terreno, condición y unidad. Valida lotes completos y descarga el resultado en CSV.',
+  intro: 'Desglosa y valida números prediales de 30 o 22 dígitos, uno a uno o por lotes, sin instalar nada.',
+};
+const npnFaq = [
+  ['¿Qué es el número predial nacional?', 'Es el código de 30 dígitos que identifica de forma única cada predio en el catastro colombiano. Su estructura indica la ubicación del predio (departamento, municipio, zona, sector, comuna, barrio, manzana o vereda), el terreno, su condición jurídica y, en propiedad horizontal, el edificio, el piso y la unidad.'],
+  ['¿Qué diferencia hay entre el NPN de 30 dígitos y el de 22?', 'El de 22 dígitos es el formato anterior: no incluye comuna ni barrio, y agrupa la construcción en un solo bloque de cuatro dígitos. Muchas bases de datos y documentos antiguos aún lo usan.'],
+  ['¿Qué significa el dígito 22, la condición del predio?', 'Indica el tipo de predio: por ejemplo, 0 para un predio no sometido a propiedad horizontal, 8 para condominios y 9 para propiedad horizontal. La tabla completa está más abajo en esta página.'],
+  ['¿Se envían mis códigos a algún servidor?', 'No. El análisis se hace por completo en tu navegador; los números que pegas no salen de tu dispositivo.'],
+];
+page({
+  url: toolUrl(NPN), title: `Decodificador de número predial nacional (NPN) de Colombia | ${cfg.siteName}`, desc: NPN.desc,
+  crumbs: [['Catastro', toolUrl(NPN)]],
+  scripts: ['dane.js', 'npn.js'],
+  ld: [
+    { '@context': 'https://schema.org', '@type': 'WebApplication', name: NPN.name, url: abs(toolUrl(NPN)), description: NPN.desc, applicationCategory: 'UtilitiesApplication', operatingSystem: 'Any', inLanguage: 'es', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } },
+    faqLd(npnFaq),
+  ],
+  body: `<h1>Decodificador de número predial nacional (NPN)</h1>
+<p class="lead">Pega un número predial de 30 o 22 dígitos y obtén su desglose completo: ubicación, terreno, condición del predio y unidad. También puedes validar un lote entero y descargarlo en CSV.</p>
+<div class="calc">
+<label><span>Número predial <small id="npn-count" class="muted"></small></span>
+<span class="field"><input id="npn" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="45" placeholder="Ej.: 050010102030400050006901050502"></span></label>
+<div class="actions"><button type="button" id="npn-demo">Ver un ejemplo</button></div>
+<div class="result" id="npn-out" aria-live="polite"></div>
+<ul class="trust"><li>Gratis y sin registro</li><li>Los códigos no salen de tu dispositivo</li><li>${Object.keys(DANE.m).length} municipios indexados</li></ul>
+</div>
+<h2 id="lote">Validar un lote de números prediales</h2>
+<p>Pega una columna de Excel o una lista separada por saltos de línea, comas o punto y coma. Detecta longitudes incorrectas, departamentos inexistentes y códigos duplicados.</p>
+<div class="calc">
+<label><span>Lista de números prediales</span><textarea id="lote" rows="6" spellcheck="false" placeholder="Un número predial por línea"></textarea></label>
+<div class="actions"><button type="button" id="lote-run" class="primary">Analizar lote</button><button type="button" id="lote-csv" hidden>Descargar CSV</button></div>
+<div class="result" id="lote-out" aria-live="polite"></div>
+</div>
+<aside class="aff"><span>Para profesionales del catastro</span><p>¿Qué validación o herramienta te ahorraría más tiempo en tu trabajo con catastro o SIG? Cuéntanos y la tendremos en cuenta para las próximas.</p><a href="mailto:${esc(cfg.contactEmail)}?subject=Herramientas%20de%20catastro">Escríbenos →</a></aside>
+<article>
+<h2>Estructura del NPN de 30 dígitos</h2>
+<table><tr><th>Posición</th><th>Componente</th><th>Dígitos</th></tr>
+<tr><td>1-2</td><td>Departamento (código DANE)</td><td>2</td></tr><tr><td>3-5</td><td>Municipio (código DANE)</td><td>3</td></tr>
+<tr><td>6-7</td><td>Zona: 00 rural, 01 urbana, 02 en adelante corregimientos</td><td>2</td></tr><tr><td>8-9</td><td>Sector</td><td>2</td></tr>
+<tr><td>10-11</td><td>Comuna</td><td>2</td></tr><tr><td>12-13</td><td>Barrio</td><td>2</td></tr>
+<tr><td>14-17</td><td>Manzana (urbano) o vereda (rural)</td><td>4</td></tr><tr><td>18-21</td><td>Terreno</td><td>4</td></tr>
+<tr><td>22</td><td>Condición del predio</td><td>1</td></tr><tr><td>23-24</td><td>Edificio o torre</td><td>2</td></tr>
+<tr><td>25-26</td><td>Piso</td><td>2</td></tr><tr><td>27-30</td><td>Unidad predial</td><td>4</td></tr></table>
+<h2>Condición del predio (dígito 22)</h2>
+<table><tr><th>Código</th><th>Significado</th></tr>
+<tr><td>0</td><td>No reglamentado en propiedad horizontal (No PH)</td></tr><tr><td>1</td><td>Servidumbre de tránsito o condición especial</td></tr>
+<tr><td>2</td><td>Predio informal (ocupación o posesión)</td></tr><tr><td>3</td><td>Bien de uso público diferente a vía</td></tr>
+<tr><td>4</td><td>Vía pública</td></tr><tr><td>5</td><td>Mejora por edificación en terreno ajeno (no PH)</td></tr>
+<tr><td>6</td><td>Mejora por edificación en terreno ajeno sometida a PH</td></tr><tr><td>7</td><td>Parque cementerio</td></tr>
+<tr><td>8</td><td>PH con área de terreno común y privada (condominio)</td></tr><tr><td>9</td><td>PH con área de terreno exclusivamente común</td></tr></table>
+<h2>Estructura del formato anterior de 22 dígitos</h2>
+<p>Departamento (2), municipio (3), zona (2), sector (2), manzana o vereda (4), terreno (4), condición (1) y construcción o unidad (4).</p>
+<p class="muted">Esta herramienta valida la estructura del código, no la existencia del predio en la base catastral. Para información oficial consulta al gestor catastral de tu municipio o al IGAC. La lógica proviene del complemento libre <a href="https://github.com/DGZ-Engineering-Lab/NPN_Explorer" rel="noopener">NPN Explorer para QGIS</a>.</p>
+${faqHtml(npnFaq)}</article>
+${slotAd()}`,
+});
+
 // Conversores: página por par + página por valor
 for (const p of pairs) {
   const rev = reverse(p);
@@ -685,6 +748,7 @@ page({
 <section id="recientes" hidden><h2>Continúa donde lo dejaste</h2><div class="grid"></div></section>
 <p id="noresults" class="muted" hidden>No encontramos esa calculadora. Prueba con otra palabra o revisa los <a href="${href('/convertir/')}">conversores de unidades</a>.</p>
 <section><h2 id="laborales">Salario y trabajo ${YEAR}</h2>${toolCards(tools.filter(t => t.group === 'laboral'))}</section>
+<section><h2 id="catastro">Catastro Colombia</h2>${toolCards([NPN])}</section>
 <section><h2 id="calculadoras">Finanzas y día a día</h2>${toolCards(tools.filter(t => !t.group))}</section>
 <section class="why"><div><strong>Claras</strong><p>Cada resultado viene con su fórmula y un ejemplo, para que entiendas de dónde sale el número.</p></div>
 <div><strong>Privadas</strong><p>Los cálculos se hacen en tu dispositivo. No pedimos correo ni registro.</p></div>
@@ -723,6 +787,7 @@ conv:({valor,par})=>{const c=CONV[par];return [[fmt(valor,4)+' '+c.from+' =',fmt
 `);
 for (const f of fs.readdirSync(path.join(ROOT, 'static'))) fs.copyFileSync(path.join(ROOT, 'static', f), path.join(OUT, 'assets', f));
 
+write('assets/dane.js', `const DANE=${JSON.stringify(DANE)};`);
 write('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${abs('/sitemap.xml')}\n`);
 write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(u => `<url><loc>${abs(u)}</loc><lastmod>${TODAY}</lastmod></url>`).join('\n')}\n</urlset>\n`);
 if (cfg.adsense?.client) write('ads.txt', `google.com, ${cfg.adsense.client.replace('ca-', '')}, DIRECT, f08c47fec0942fa0\n`);
