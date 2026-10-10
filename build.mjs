@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, 'site.config.json'), 'utf8'));
@@ -17,6 +18,8 @@ const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(
 const href = p => B + p;
 const abs = p => SITE + p;
 const urls = [];
+// Versión de los assets: cambia cuando cambia el código, para que el navegador no use copias en caché
+const V = createHash('sha1').update(fs.readFileSync(fileURLToPath(import.meta.url))).update(fs.readdirSync(path.join(ROOT, 'static')).map(f => fs.readFileSync(path.join(ROOT, 'static', f))).join('')).digest('hex').slice(0, 8);
 
 function write(rel, content) {
   const f = path.join(OUT, rel);
@@ -58,7 +61,7 @@ ${index ? '' : '<meta name="robots" content="noindex">'}
 <meta property="og:site_name" content="${esc(cfg.siteName)}">
 ${cfg.googleSiteVerification ? `<meta name="google-site-verification" content="${esc(cfg.googleSiteVerification)}">` : ''}
 <link rel="icon" href="${href('/assets/favicon.svg')}" type="image/svg+xml">
-<link rel="stylesheet" href="${href('/assets/style.css')}">
+<link rel="stylesheet" href="${href('/assets/style.css')}?v=${V}">
 ${ld.map(o => `<script type="application/ld+json">${JSON.stringify(o).replace(/</g, '\\u003c')}</script>`).join('\n')}
 ${cfg.adsense?.client ? `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${esc(cfg.adsense.client)}" crossorigin="anonymous"></script>` : ''}
 ${cfg.ads?.headHtml || ''}
@@ -74,8 +77,8 @@ ${body}
 <footer><div class="wrap"><p>© ${YEAR} ${esc(cfg.siteName)} · ${esc(cfg.tagline)}</p>
 <p><a href="${href('/acerca/')}">Acerca de</a> · <a href="${href('/privacidad/')}">Privacidad</a> · <a href="${href('/terminos/')}">Términos</a> · <a href="${href('/contacto/')}">Contacto</a></p>
 <p class="muted">Los resultados son orientativos y no constituyen asesoría financiera, fiscal ni médica.</p></div></footer>
-<script src="${href('/assets/tools.js')}" defer></script>
-<script src="${href('/assets/app.js')}" defer></script>
+<script src="${href('/assets/tools.js')}?v=${V}" defer></script>
+<script src="${href('/assets/app.js')}?v=${V}" defer></script>
 </body>
 </html>`;
   write(path.join(url, 'index.html'), html);
